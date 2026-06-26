@@ -1,20 +1,16 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { loginSchema } from '@/lib/schemas/user';
+import crypto from 'crypto';
+import { connectDB } from '@/lib/mongodb';
+import { User } from '@/lib/models/User';
+
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 /**
  * NextAuth.js Configuration
- * 
- * Implements secure authentication with:
- * - JWT strategy with HTTP-only cookies
- * - Secure cookie flags (HttpOnly, Secure, SameSite)
- * - Session management
- * 
- * Validates Requirements:
- * - 1.2: Verify credentials and create session
- * - 1.4: Session expiration and redirect
- * - 1.5: Secure session management with HTTP-only cookies
- * - 1.6: Logout and session termination
  */
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -34,63 +30,37 @@ export const authOptions: NextAuthOptions = {
         const { email, password } = validationResult.data;
 
         try {
-          // TODO: Replace this mock implementation with actual backend API call
-          // For development/demo purposes, we're using hardcoded credentials
-          
-          // Mock superadmin credentials for development
-          const mockSuperadmin = {
-            email: 'admin@phelbo.com',
-            password: 'admin123', // In production, this would be verified against a hashed password
-          };
+          await connectDB();
+          const user = await User.findOne({ email: email.toLowerCase() });
 
-          // Verify credentials
-          if (email !== mockSuperadmin.email || password !== mockSuperadmin.password) {
+          if (!user) {
             throw new Error('Invalid email or password');
+          }
+
+          if (user.status !== 'active') {
+            throw new Error('Your account is deactivated. Please contact admin.');
+          }
+
+          // Check password
+          const hashedPassword = hashPassword(password);
+          if (user.password && user.password !== hashedPassword) {
+            throw new Error('Invalid email or password');
+          }
+
+          // Map role for session: 'Admin' -> 'superadmin', others lowercase
+          let sessionRole = user.role.toLowerCase();
+          if (user.role === 'Admin') {
+            sessionRole = 'superadmin';
           }
 
           // Return user object for session
           return {
-            id: 'superadmin-1',
-            email: mockSuperadmin.email,
-            name: 'Super Admin',
-            role: 'superadmin',
-            accessToken: 'mock-access-token', // In production, this comes from the backend
+            id: user._id.toString(),
+            email: user.email,
+            name: user.fullName,
+            role: sessionRole,
+            accessToken: 'mock-access-token',
           };
-
-          /* 
-          // Uncomment this block when you have a real backend API:
-          
-          const response = await fetch(
-            `${process.env.API_BASE_URL || 'http://localhost:3001'}/api/auth/login`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ email, password }),
-            }
-          );
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Invalid credentials');
-          }
-
-          const data = await response.json();
-
-          // Verify user is a superadmin
-          if (data.user?.role !== 'superadmin') {
-            throw new Error('Insufficient permissions');
-          }
-
-          return {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role,
-            accessToken: data.accessToken,
-          };
-          */
         } catch (error) {
           console.error('Authentication error:', error);
           throw error;

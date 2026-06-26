@@ -34,8 +34,8 @@ export const createUserSchema = z.object({
     .regex(/^\+?[\d\s\-()]+$/, 'Invalid phone number')
     .optional()
     .or(z.literal('')),
-  role: z.enum(['Admin', 'Member', 'Guest'], {
-    message: 'Role must be Admin, Member, or Guest',
+  role: z.enum(['Admin', 'Member', 'Guest', 'FieldWorker'], {
+    message: 'Role must be Admin, Member, Guest, or FieldWorker',
   }),
 });
 
@@ -61,8 +61,8 @@ export const updateUserSchema = z
       .optional()
       .or(z.literal('')),
     role: z
-      .enum(['Admin', 'Member', 'Guest'], {
-        message: 'Role must be Admin, Member, or Guest',
+      .enum(['Admin', 'Member', 'Guest', 'FieldWorker'], {
+        message: 'Role must be Admin, Member, Guest, or FieldWorker',
       })
       .optional(),
   })
@@ -76,5 +76,5 @@ export type CreateUserFormData = z.infer<typeof createUserSchema>;
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>;
 
 // Additional types for user role and status
-export type UserRole = 'Admin' | 'Member' | 'Guest';
+export type UserRole = 'Admin' | 'Member' | 'Guest' | 'FieldWorker';
 export type UserStatus = 'active' | 'deactivated';

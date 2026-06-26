@@ -118,17 +118,26 @@ export function UserTable({
    */
   const getRoleBadgeClass = (role: UserRole): string => {
     const baseClass =
-      'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium';
+      'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider';
     switch (role) {
       case 'Admin':
-        return `${baseClass} bg-purple-100 text-purple-700`;
+        return `${baseClass} bg-purple-50 text-purple-700 border border-purple-200/50`;
       case 'Member':
-        return `${baseClass} bg-blue-100 text-blue-700`;
+        return `${baseClass} bg-blue-50 text-blue-700 border border-blue-200/50`;
       case 'Guest':
-        return `${baseClass} bg-gray-100 text-gray-700`;
+        return `${baseClass} bg-slate-50 text-slate-600 border border-slate-200/50`;
+      case 'FieldWorker':
+        return `${baseClass} bg-indigo-50 text-indigo-700 border border-indigo-200/50`;
       default:
-        return `${baseClass} bg-gray-100 text-gray-700`;
+        return `${baseClass} bg-slate-50 text-slate-600 border border-slate-250`;
     }
+  };
+
+  const getInitials = (name: string): string => {
+    if (!name) return 'U';
+    const pts = name.split(' ');
+    if (pts.length > 1) return `${pts[0][0]}${pts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   };
 
   /**
@@ -154,25 +163,25 @@ export function UserTable({
   // Empty state: no users to display
   if (!isLoading && users.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          No users found. Create your first user to get started.
+      <div className="flex flex-col items-center justify-center py-12 text-center bg-slate-50/50 rounded-2xl border border-dashed">
+        <p className="text-xs font-bold text-slate-500">
+          No users found matching query
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-[24px] border border-slate-200/80 overflow-hidden shadow-sm bg-white">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Registration Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/80">
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4 px-6">Name</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Email</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Role</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Status</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Registration Date</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4 text-right px-6">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -180,26 +189,26 @@ export function UserTable({
             // Loading skeleton rows
             Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={`loading-${index}`}>
-                <TableCell>
-                  <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                <TableCell className="px-6">
+                  <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-48 animate-pulse rounded bg-slate-100" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-24 animate-pulse rounded bg-slate-100" />
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-6">
                   <div className="flex justify-end gap-2">
-                    <div className="h-8 w-14 animate-pulse rounded bg-muted" />
-                    <div className="h-8 w-14 animate-pulse rounded bg-muted" />
-                    <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+                    <div className="h-8 w-14 animate-pulse rounded bg-slate-100" />
+                    <div className="h-8 w-14 animate-pulse rounded bg-slate-100" />
+                    <div className="h-8 w-16 animate-pulse rounded bg-slate-100" />
                   </div>
                 </TableCell>
               </TableRow>
@@ -210,23 +219,34 @@ export function UserTable({
               <TableRow
                 key={user.id}
                 onClick={() => handleRowClick(user.id)}
-                className={onUserClick ? 'cursor-pointer' : ''}
+                className={`border-b border-slate-150/70 hover:bg-slate-50/50 transition-colors ${onUserClick ? 'cursor-pointer' : ''}`}
               >
-                <TableCell className="font-medium">{user.fullName}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="py-3.5 px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8.5 h-8.5 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-[10px] font-black text-slate-700 shrink-0">
+                      {getInitials(user.fullName)}
+                    </div>
+                    <span className="font-extrabold text-slate-900">{user.fullName}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-slate-500 font-mono text-[11px]">{user.email}</TableCell>
                 <TableCell>
                   <span className={getRoleBadgeClass(user.role)}>
-                    {user.role}
+                    {user.role === 'FieldWorker' ? 'Field Worker' : user.role}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className={getStatusBadgeClass(user.status)}>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border ${
+                    user.status === 'active'
+                      ? 'bg-green-50 text-green-700 border-green-200/50'
+                      : 'bg-slate-100 text-slate-500 border-slate-200/40'
+                  }`}>
                     {user.status}
                   </span>
                 </TableCell>
-                <TableCell>{formatDate(user.registrationDate)}</TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-2">
+                <TableCell className="text-slate-400 font-mono text-[10px]">{formatDate(user.registrationDate)}</TableCell>
+                <TableCell className="px-6">
+                  <div className="flex justify-end gap-1">
                     {onView && (
                       <Button
                         variant="ghost"

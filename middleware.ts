@@ -2,22 +2,40 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
 /**
- * Middleware to protect dashboard routes
+ * Middleware to protect dashboard and mobile routes
  * 
- * Verifies authenticated superadmin session before allowing access
- * to protected routes. Redirects unauthenticated users to login.
- * 
- * Validates Requirements:
- * - 1.4: Redirect to login when session expires or is missing
- * - 1.2: Verify superadmin session on protected routes
+ * Verifies authenticated session and role before allowing access.
+ * - superadmin -> has access to admin dashboard and mobile
+ * - fieldworker -> has access to mobile dashboard and attendance APIs
  */
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
+    const path = req.nextUrl.pathname;
 
-    // Verify user has superadmin role
-    if (token?.role !== 'superadmin') {
-      // Redirect to login if not superadmin
+    // If no token exists, the user is unauthenticated
+    if (!token) {
+      if (path.startsWith('/mobile')) {
+        return NextResponse.redirect(new URL('/mobile/login', req.url));
+      }
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
+
+    // Role-based access control
+    
+    // 1. Mobile interface and Attendance API access
+    if (path.startsWith('/mobile') || path.startsWith('/api/attendance')) {
+      if (token.role === 'fieldworker' || token.role === 'superadmin') {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL('/mobile/login', req.url));
+    }
+
+    // 2. Admin dashboard access (everything else matched by middleware)
+    if (token.role !== 'superadmin') {
+      if (token.role === 'fieldworker') {
+        return NextResponse.redirect(new URL('/mobile', req.url));
+      }
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
@@ -25,36 +43,26 @@ export default withAuth(
   },
   {
     callbacks: {
-      // Only execute middleware if user is authenticated
-      authorized: ({ token }) => !!token,
-    },
-    pages: {
-      signIn: '/login',
+      // Set to true so middleware always runs for matched routes, allowing custom redirect logic
+      authorized: () => true,
     },
   }
 );
 
 /**
  * Configure which routes require authentication
- * 
- * Protected routes:
- * - /dashboard/* - All dashboard pages
- * - /users/* - User management pages
- * - /api/* - API routes (except auth)
- * 
- * Public routes:
- * - /login - Login page
- * - /api/auth/* - NextAuth.js endpoints
  */
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - /login (login page)
+     * - /login (admin login)
+     * - /mobile/login (field worker login)
      * - /api/auth/* (NextAuth.js endpoints)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt (static files)
      */
-    '/((?!login|api/auth|_next|favicon.ico|robots.txt|.*\\..*$).*)',
+    '/((?!login|mobile/login|api/auth|_next|favicon.ico|robots.txt|.*\\..*$).*)',
   ],
 };
+

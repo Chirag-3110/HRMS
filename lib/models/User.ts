@@ -15,6 +15,7 @@ export interface IUser {
   status: UserStatus;
   registrationDate: Date;
   lastLoginDate?: Date;
+  password?: string;
 }
 
 export interface IUserDocument extends IUser, mongoose.Document {
@@ -45,8 +46,11 @@ const userSchema = new Schema<IUserDocument>(
     role: {
       type: String,
       required: true,
-      enum: ['Admin', 'Member', 'Guest'],
+      enum: ['Admin', 'Member', 'Guest', 'FieldWorker'],
       default: 'Member',
+    },
+    password: {
+      type: String,
     },
     status: {
       type: String,
