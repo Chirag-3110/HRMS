@@ -12,12 +12,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const searchParams = request.nextUrl.searchParams;
+    const adminTenantId = (session.user as any).tenantId;
+    let activeTenantId = adminTenantId;
+    if (!adminTenantId || adminTenantId === 'system') {
+      activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+    }
+
+    const query: any = {};
+    if (activeTenantId) {
+      query.tenantId = activeTenantId;
+    }
+
     await connectDB();
 
     const roles: UserRole[] = ['Admin', 'Member', 'Guest', 'FieldWorker'];
     const breakdown = await Promise.all(
       roles.map(async (role) => {
-        const count = await User.countDocuments({ role });
+        const count = await User.countDocuments({ ...query, role });
         return { role, count };
       })
     );

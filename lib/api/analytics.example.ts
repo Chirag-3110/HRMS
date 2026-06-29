@@ -23,7 +23,7 @@ import {
 export function useAnalyticsSummary() {
   return useQuery({
     queryKey: ['analytics', 'summary'],
-    queryFn: fetchAnalyticsSummary,
+    queryFn: () => fetchAnalyticsSummary(),
     staleTime: 60000, // 1 minute
     retry: 2,
   });

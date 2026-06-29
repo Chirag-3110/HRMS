@@ -38,13 +38,13 @@ import {
  */
 export const analyticsKeys = {
   all: ['analytics'] as const,
-  summary: () => [...analyticsKeys.all, 'summary'] as const,
-  registrationTrends: (dateRange?: DateRangeFilter) =>
-    [...analyticsKeys.all, 'registration-trends', dateRange] as const,
-  roleBreakdown: (dateRange?: DateRangeFilter) =>
-    [...analyticsKeys.all, 'role-breakdown', dateRange] as const,
-  statusBreakdown: (dateRange?: DateRangeFilter) =>
-    [...analyticsKeys.all, 'status-breakdown', dateRange] as const,
+  summary: (tenantId?: string) => [...analyticsKeys.all, 'summary', tenantId] as const,
+  registrationTrends: (dateRange?: DateRangeFilter, tenantId?: string) =>
+    [...analyticsKeys.all, 'registration-trends', dateRange, tenantId] as const,
+  roleBreakdown: (dateRange?: DateRangeFilter, tenantId?: string) =>
+    [...analyticsKeys.all, 'role-breakdown', dateRange, tenantId] as const,
+  statusBreakdown: (dateRange?: DateRangeFilter, tenantId?: string) =>
+    [...analyticsKeys.all, 'status-breakdown', dateRange, tenantId] as const,
 };
 
 /**
@@ -68,30 +68,13 @@ const ANALYTICS_QUERY_OPTIONS = {
  * 
  * Returns total users, active users, and new users in last 30 days
  * 
+ * @param tenantId - Optional tenant ID to scope metrics
  * @returns TanStack Query result with summary data, loading state, and error state
- * 
- * @example
- * ```tsx
- * const { data, isLoading, error } = useAnalyticsSummary();
- * 
- * if (isLoading) return <LoadingSkeleton variant="card" />;
- * if (error) return <ErrorNotification message={error.message} />;
- * 
- * return (
- *   <SummaryCards
- *     totalUsers={data.totalUsers}
- *     activeUsers={data.activeUsers}
- *     newUsers={data.newUsersLast30Days}
- *   />
- * );
- * ```
- * 
- * Validates Requirements: 10.1, 10.5, 14.3
  */
-export function useAnalyticsSummary(): UseQueryResult<AnalyticsSummary, Error> {
+export function useAnalyticsSummary(tenantId?: string): UseQueryResult<AnalyticsSummary, Error> {
   return useQuery({
-    queryKey: analyticsKeys.summary(),
-    queryFn: fetchAnalyticsSummary,
+    queryKey: analyticsKeys.summary(tenantId),
+    queryFn: () => fetchAnalyticsSummary(tenantId),
     ...ANALYTICS_QUERY_OPTIONS,
   });
 }
@@ -102,33 +85,16 @@ export function useAnalyticsSummary(): UseQueryResult<AnalyticsSummary, Error> {
  * Returns registration counts grouped by month (default: last 12 months)
  * 
  * @param dateRange - Optional date range filter for trends
+ * @param tenantId - Optional tenant ID to scope metrics
  * @returns TanStack Query result with registration trend data
- * 
- * @example
- * ```tsx
- * // Fetch last 12 months (default)
- * const { data, isLoading, error } = useRegistrationTrends();
- * 
- * // Fetch custom date range
- * const { data, isLoading, error } = useRegistrationTrends({
- *   startDate: '2023-01-01',
- *   endDate: '2023-12-31'
- * });
- * 
- * if (isLoading) return <LoadingSkeleton variant="chart" />;
- * if (error) return <ErrorNotification message={error.message} />;
- * 
- * return <RegistrationTrendChart data={data.data} />;
- * ```
- * 
- * Validates Requirements: 10.2, 10.5, 14.3
  */
 export function useRegistrationTrends(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): UseQueryResult<RegistrationTrend, Error> {
   return useQuery({
-    queryKey: analyticsKeys.registrationTrends(dateRange),
-    queryFn: () => fetchRegistrationTrends(dateRange),
+    queryKey: analyticsKeys.registrationTrends(dateRange, tenantId),
+    queryFn: () => fetchRegistrationTrends(dateRange, tenantId),
     ...ANALYTICS_QUERY_OPTIONS,
   });
 }
@@ -139,26 +105,16 @@ export function useRegistrationTrends(
  * Returns count of users for each role (Admin, Member, Guest)
  * 
  * @param dateRange - Optional date range filter for role breakdown
+ * @param tenantId - Optional tenant ID to scope metrics
  * @returns TanStack Query result with role breakdown data
- * 
- * @example
- * ```tsx
- * const { data, isLoading, error } = useRoleBreakdown();
- * 
- * if (isLoading) return <LoadingSkeleton variant="chart" />;
- * if (error) return <ErrorNotification message={error.message} />;
- * 
- * return <RoleBreakdownChart data={data.data} />;
- * ```
- * 
- * Validates Requirements: 10.3, 10.5, 14.3
  */
 export function useRoleBreakdown(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): UseQueryResult<RoleBreakdown, Error> {
   return useQuery({
-    queryKey: analyticsKeys.roleBreakdown(dateRange),
-    queryFn: () => fetchRoleBreakdown(dateRange),
+    queryKey: analyticsKeys.roleBreakdown(dateRange, tenantId),
+    queryFn: () => fetchRoleBreakdown(dateRange, tenantId),
     ...ANALYTICS_QUERY_OPTIONS,
   });
 }
@@ -169,26 +125,16 @@ export function useRoleBreakdown(
  * Returns count of users for each status (active, deactivated)
  * 
  * @param dateRange - Optional date range filter for status breakdown
+ * @param tenantId - Optional tenant ID to scope metrics
  * @returns TanStack Query result with status breakdown data
- * 
- * @example
- * ```tsx
- * const { data, isLoading, error } = useStatusBreakdown();
- * 
- * if (isLoading) return <LoadingSkeleton variant="chart" />;
- * if (error) return <ErrorNotification message={error.message} />;
- * 
- * return <StatusBreakdownChart data={data.data} />;
- * ```
- * 
- * Validates Requirements: 10.4, 10.5, 14.3
  */
 export function useStatusBreakdown(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): UseQueryResult<StatusBreakdown, Error> {
   return useQuery({
-    queryKey: analyticsKeys.statusBreakdown(dateRange),
-    queryFn: () => fetchStatusBreakdown(dateRange),
+    queryKey: analyticsKeys.statusBreakdown(dateRange, tenantId),
+    queryFn: () => fetchStatusBreakdown(dateRange, tenantId),
     ...ANALYTICS_QUERY_OPTIONS,
   });
 }

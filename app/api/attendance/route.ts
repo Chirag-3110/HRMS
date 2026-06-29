@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       date: todayStr,
       totalDistanceKm: 0,
       status: 'checked_in',
+      tenantId: user.tenantId || undefined,
     });
 
     // Save initial starting coordinate log
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       longitude,
       timestamp: new Date(),
       distanceFromPrev: 0,
+      tenantId: user.tenantId || undefined,
     });
 
     // Record system activity
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
       userId,
       actionType: 'check_in',
       description: `Checked in at lat: ${latitude}, lng: ${longitude}`,
+      tenantId: user.tenantId || undefined,
     });
 
     return NextResponse.json(shift, { status: 201 });
@@ -120,6 +123,7 @@ export async function PUT(request: NextRequest) {
       longitude,
       timestamp: new Date(),
       distanceFromPrev: finalSegmentDist,
+      tenantId: user.tenantId || undefined,
     });
 
     // Update attendance record
@@ -134,6 +138,7 @@ export async function PUT(request: NextRequest) {
       userId,
       actionType: 'check_out',
       description: `Checked out. Total distance: ${shift.totalDistanceKm} km`,
+      tenantId: user.tenantId || undefined,
     });
 
     return NextResponse.json(shift);

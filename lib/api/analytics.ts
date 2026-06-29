@@ -183,9 +183,11 @@ function transformAnalyticsError(error: unknown): AnalyticsApiError {
  * 
  * Validates Requirements: 10.1
  */
-export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
+export async function fetchAnalyticsSummary(tenantId?: string): Promise<AnalyticsSummary> {
   try {
-    const response = await apiClient.get<AnalyticsSummary>('/analytics/summary');
+    const response = await apiClient.get<AnalyticsSummary>('/analytics/summary', {
+      params: { ...(tenantId && { tenantId }) }
+    });
     return response.data;
   } catch (error) {
     throw transformAnalyticsError(error);
@@ -199,13 +201,15 @@ export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
  * Defaults to last 12 months if no date range provided
  * 
  * @param dateRange - Optional date range filter for trends
+ * @param tenantId - Optional tenant ID filter
  * @returns Promise with registration trend data
  * @throws AnalyticsApiError with user-friendly message
  * 
  * Validates Requirements: 10.2
  */
 export async function fetchRegistrationTrends(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): Promise<RegistrationTrend> {
   try {
     const response = await apiClient.get<RegistrationTrend>(
@@ -214,6 +218,7 @@ export async function fetchRegistrationTrends(
         params: {
           ...(dateRange?.startDate && { startDate: dateRange.startDate }),
           ...(dateRange?.endDate && { endDate: dateRange.endDate }),
+          ...(tenantId && { tenantId }),
         },
       }
     );
@@ -229,13 +234,15 @@ export async function fetchRegistrationTrends(
  * Returns count of users for each role (Admin, Member, Guest)
  * 
  * @param dateRange - Optional date range filter for role breakdown
+ * @param tenantId - Optional tenant ID filter
  * @returns Promise with role breakdown data
  * @throws AnalyticsApiError with user-friendly message
  * 
  * Validates Requirements: 10.3
  */
 export async function fetchRoleBreakdown(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): Promise<RoleBreakdown> {
   try {
     const response = await apiClient.get<RoleBreakdown>(
@@ -244,6 +251,7 @@ export async function fetchRoleBreakdown(
         params: {
           ...(dateRange?.startDate && { startDate: dateRange.startDate }),
           ...(dateRange?.endDate && { endDate: dateRange.endDate }),
+          ...(tenantId && { tenantId }),
         },
       }
     );
@@ -259,13 +267,15 @@ export async function fetchRoleBreakdown(
  * Returns count of users for each status (active, deactivated)
  * 
  * @param dateRange - Optional date range filter for status breakdown
+ * @param tenantId - Optional tenant ID filter
  * @returns Promise with status breakdown data
  * @throws AnalyticsApiError with user-friendly message
  * 
  * Validates Requirements: 10.4
  */
 export async function fetchStatusBreakdown(
-  dateRange?: DateRangeFilter
+  dateRange?: DateRangeFilter,
+  tenantId?: string
 ): Promise<StatusBreakdown> {
   try {
     const response = await apiClient.get<StatusBreakdown>(
@@ -274,6 +284,7 @@ export async function fetchStatusBreakdown(
         params: {
           ...(dateRange?.startDate && { startDate: dateRange.startDate }),
           ...(dateRange?.endDate && { endDate: dateRange.endDate }),
+          ...(tenantId && { tenantId }),
         },
       }
     );

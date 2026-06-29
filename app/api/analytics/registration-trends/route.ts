@@ -11,10 +11,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
+    const searchParams = request.nextUrl.searchParams;
+    const adminTenantId = (session.user as any).tenantId;
+    let activeTenantId = adminTenantId;
+    if (!adminTenantId || adminTenantId === 'system') {
+      activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+    }
+
+    const query: any = {};
+    if (activeTenantId) {
+      query.tenantId = activeTenantId;
+    }
+
     await connectDB();
 
     // Fetch user registration dates
-    const users = await User.find({}).select('registrationDate').lean();
+    const users = await User.find(query).select('registrationDate').lean();
     
     // Initialize past 12 months data structure
     const monthsData: Record<string, number> = {};

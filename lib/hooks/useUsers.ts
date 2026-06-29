@@ -39,6 +39,7 @@ export interface UseUsersParams {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
+  tenantId?: string;
 }
 
 /**
@@ -74,6 +75,7 @@ export function useUsers(
     search: params.search,
     role: params.role,
     status: params.status,
+    tenantId: params.tenantId,
   };
 
   return useQuery({

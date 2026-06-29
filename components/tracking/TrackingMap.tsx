@@ -15,6 +15,7 @@ interface TrackingMapProps {
   checkInLocation?: { latitude: number; longitude: number; address?: string };
   checkOutLocation?: { latitude: number; longitude: number; address?: string };
   currentLocation?: { latitude: number; longitude: number };
+  simulating?: boolean;
 }
 
 export default function TrackingMap({
@@ -22,9 +23,12 @@ export default function TrackingMap({
   checkInLocation,
   checkOutLocation,
   currentLocation,
+  simulating = false,
 }: TrackingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const currentMarkerRef = useRef<any>(null);
+  
   const [leafletLoaded, setLeafletLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -60,16 +64,18 @@ export default function TrackingMap({
     document.body.appendChild(script);
   }, []);
 
-  // Map Initialization and Rendering
+  // Effect 1: Initialize Map & static route/checkpoints (A and B markers)
   useEffect(() => {
     if (!leafletLoaded || !mapContainerRef.current) return;
 
     const L = (window as any).L;
     if (!L) return;
 
+    // Reset previous map instance
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
+      currentMarkerRef.current = null;
     }
 
     let centerLat = 40.7128;
@@ -83,29 +89,28 @@ export default function TrackingMap({
       centerLng = checkInLocation.longitude;
     }
 
-    // Initialize Map with clean presets
+    // Initialize Map
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
     }).setView([centerLat, centerLng], 14);
     
     mapInstanceRef.current = map;
 
-    // Add clean map tiles (CartoDB Positron - light, sleek, and high-contrast for fleet tracking)
+    // CartoDB Positron light clean map tiles
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(map);
 
-    // Standard Zoom Control positioned bottom-right to avoid blocking overlay elements
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Create high-tech HTML/CSS marker div icons
+    // Dynamic marker DivIcons
     const startIcon = L.divIcon({
       html: `
         <div class="relative w-8 h-8 flex items-center justify-center">
           <div class="absolute w-6 h-6 rounded-full bg-emerald-500/25 sonar-wave"></div>
-          <div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white shadow-md flex items-center justify-center text-white font-extrabold text-[9px]">A</div>
+          <div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white shadow-md flex items-center justify-center text-white font-extrabold text-[9px] font-display">A</div>
         </div>
       `,
       className: 'custom-leaflet-marker',
@@ -117,7 +122,7 @@ export default function TrackingMap({
       html: `
         <div class="relative w-8 h-8 flex items-center justify-center">
           <div class="absolute w-6 h-6 rounded-full bg-rose-500/25 sonar-wave"></div>
-          <div class="w-6 h-6 rounded-full bg-rose-500 border-2 border-white shadow-md flex items-center justify-center text-white font-extrabold text-[9px]">B</div>
+          <div class="w-6 h-6 rounded-full bg-rose-500 border-2 border-white shadow-md flex items-center justify-center text-white font-extrabold text-[9px] font-display">B</div>
         </div>
       `,
       className: 'custom-leaflet-marker',
@@ -125,29 +130,14 @@ export default function TrackingMap({
       iconAnchor: [16, 16],
     });
 
-    const currentIcon = L.divIcon({
-      html: `
-        <div class="relative w-10 h-10 flex items-center justify-center">
-          <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 sonar-wave"></div>
-          <div class="absolute w-5 h-5 rounded-full bg-blue-500/40 animate-ping"></div>
-          <div class="w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center">
-            <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-          </div>
-        </div>
-      `,
-      className: 'custom-leaflet-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-
-    const checkpointIcon = (idx: number) => L.divIcon({
+    const checkpointIcon = L.divIcon({
       html: `<div class="w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-white shadow"></div>`,
       className: 'custom-leaflet-checkpoint',
       iconSize: [10, 10],
       iconAnchor: [5, 5],
     });
 
-    // Plot start point
+    // Plot check-in checkpoint
     const start = checkInLocation || (route.length > 0 ? route[0] : null);
     if (start) {
       L.marker([start.latitude, start.longitude], { icon: startIcon })
@@ -155,47 +145,39 @@ export default function TrackingMap({
         .bindPopup(`<b>Start Check-In</b><br>${start.latitude.toFixed(5)}, ${start.longitude.toFixed(5)}`);
     }
 
-    // Plot check-out
+    // Plot checkout checkpoint
     const end = checkOutLocation || (route.length > 1 ? route[route.length - 1] : null);
-    const isCheckedOut = !!checkOutLocation || (route.length > 1 && !currentLocation);
+    const isCheckedOut = !!checkOutLocation;
     if (end && isCheckedOut) {
       L.marker([end.latitude, end.longitude], { icon: endIcon })
         .addTo(map)
         .bindPopup(`<b>End Check-Out</b><br>${end.latitude.toFixed(5)}, ${end.longitude.toFixed(5)}`);
     }
 
-    // Plot live worker position
-    const curr = currentLocation || (route.length > 0 && !isCheckedOut ? route[route.length - 1] : null);
-    if (curr && !isCheckedOut) {
-      L.marker([curr.latitude, curr.longitude], { icon: currentIcon })
-        .addTo(map)
-        .bindPopup(`<b>Live Dispatch Position</b><br>Worker Active On Duty`);
-    }
-
-    // Plot intermediate path coordinate dots
+    // Plot coordinate dots
     if (route.length > 2) {
       for (let i = 1; i < route.length - 1; i++) {
-        L.marker([route[i].latitude, route[i].longitude], { icon: checkpointIcon(i) }).addTo(map);
+        L.marker([route[i].latitude, route[i].longitude], { icon: checkpointIcon }).addTo(map);
       }
     }
 
-    // Draw route path line with clean colors
+    // Plot polyline tracking path
     if (route.length > 0) {
       const latlngs = route.map((p) => [p.latitude, p.longitude]);
       
-      // Main glowing shadow line
+      // Indigo glow trace
       L.polyline(latlngs, {
         color: '#6366f1',
         weight: 6,
-        opacity: 0.15,
+        opacity: 0.2,
       }).addTo(map);
 
-      // Dash path overlay
+      // Dash path lines
       const polyline = L.polyline(latlngs, {
         color: '#4f46e5',
-        weight: 4,
-        opacity: 0.8,
-        dashArray: '8, 8',
+        weight: 3.5,
+        opacity: 0.85,
+        dashArray: '6, 6',
       }).addTo(map);
 
       map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
@@ -207,9 +189,50 @@ export default function TrackingMap({
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        currentMarkerRef.current = null;
       }
     };
-  }, [leafletLoaded, route, checkInLocation, checkOutLocation, currentLocation]);
+  }, [leafletLoaded, route, checkInLocation, checkOutLocation]);
+
+  // Effect 2: Dynamically move active currentLocation marker (Replay Simulation)
+  useEffect(() => {
+    if (!leafletLoaded || !mapInstanceRef.current || !currentLocation) return;
+
+    const L = (window as any).L;
+    if (!L) return;
+
+    const currentIcon = L.divIcon({
+      html: `
+        <div class="relative w-10 h-10 flex items-center justify-center">
+          <div class="absolute w-8 h-8 rounded-full bg-indigo-500/25 sonar-wave"></div>
+          <div class="absolute w-5 h-5 rounded-full bg-indigo-500/40 animate-ping"></div>
+          <div class="w-5 h-5 rounded-full bg-indigo-650 border-2 border-white shadow-lg flex items-center justify-center">
+            <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+          </div>
+        </div>
+      `,
+      className: 'custom-leaflet-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+
+    if (currentMarkerRef.current) {
+      // Smoothly update position
+      currentMarkerRef.current.setLatLng([currentLocation.latitude, currentLocation.longitude]);
+      
+      // Auto-pan to center simulated worker position
+      if (simulating) {
+        mapInstanceRef.current.panTo([currentLocation.latitude, currentLocation.longitude], { animate: true });
+      }
+    } else {
+      // Initialize live tracker marker
+      currentMarkerRef.current = L.marker(
+        [currentLocation.latitude, currentLocation.longitude],
+        { icon: currentIcon }
+      ).addTo(mapInstanceRef.current)
+       .bindPopup(`<b>Live Dispatch Position</b>`);
+    }
+  }, [leafletLoaded, currentLocation, simulating]);
 
   if (loadError || !leafletLoaded) {
     return (
@@ -219,14 +242,14 @@ export default function TrackingMap({
         {!loadError ? (
           <div className="space-y-4 z-10">
             <Compass className="h-12 w-12 text-indigo-500 animate-spin-slow mx-auto" />
-            <h4 className="text-xs font-black uppercase tracking-widest text-slate-300">Loading Telemetry Engine...</h4>
-            <p className="text-[10px] text-slate-500 max-w-xs">Initializing OpenStreetMap dispatch tiles</p>
+            <h4 className="text-xs font-black uppercase tracking-widest text-slate-355 font-display">Loading Telemetry Engine...</h4>
+            <p className="text-[10px] text-slate-550 max-w-xs font-mono">Initializing OpenStreetMap satellite tiles</p>
           </div>
         ) : (
           <div className="space-y-4 z-10 w-full max-w-md">
             <MapPin className="h-10 w-10 text-amber-500 mx-auto" />
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300">Schematic Route Fallback</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-300 font-display">Schematic Route Fallback</h4>
               <p className="text-[10px] text-slate-500 mt-1">Rendered schematic representation of GPS logs</p>
             </div>
             
@@ -256,7 +279,7 @@ export default function TrackingMap({
                 </svg>
               </div>
             ) : (
-              <p className="text-xs text-slate-600">No shift coordinates logged today.</p>
+              <p className="text-xs text-slate-600 font-sans">No shift coordinates logged today.</p>
             )}
           </div>
         )}
@@ -266,7 +289,6 @@ export default function TrackingMap({
 
   return (
     <div className="w-full h-full relative">
-      {/* Sonar Pulse Keyframes Animation Injection */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes sonarPulse {
           0% { transform: scale(0.6); opacity: 0.9; }

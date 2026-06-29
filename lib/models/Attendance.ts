@@ -17,6 +17,7 @@ export interface IAttendance {
   date: string; // Format: YYYY-MM-DD
   totalDistanceKm: number;
   status: 'checked_in' | 'checked_out';
+  tenantId?: string;
 }
 
 export interface IAttendanceDocument extends IAttendance, Document {
@@ -31,6 +32,10 @@ const attendanceSchema = new Schema<IAttendanceDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
+    },
+    tenantId: {
+      type: String,
       index: true,
     },
     checkInTime: {

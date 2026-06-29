@@ -11,6 +11,7 @@ export interface IActivity {
   timestamp: Date;
   actionType: string;
   description: string;
+  tenantId?: string;
 }
 
 export interface IActivityDocument extends IActivity, mongoose.Document {
@@ -23,6 +24,10 @@ const activitySchema = new Schema<IActivityDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
+    },
+    tenantId: {
+      type: String,
       index: true,
     },
     timestamp: {

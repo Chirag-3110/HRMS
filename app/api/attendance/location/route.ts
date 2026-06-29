@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       longitude,
       timestamp: new Date(),
       distanceFromPrev: distance,
+      tenantId: user.tenantId || undefined,
     });
 
     // Update total distance in shift if distance moved is greater than 10 meters (prevents GPS jitter drift)

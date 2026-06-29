@@ -27,8 +27,8 @@
 
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { UserForm } from '@/components/users/UserForm';
 import { ErrorNotification } from '@/components/common/ErrorNotification';
 import { SuccessNotification } from '@/components/common/SuccessNotification';
@@ -38,13 +38,14 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
- * User Creation Page Component
+ * User Creation Form Content Component
  * 
- * Provides the interface for superadmins to create new Phelbo users.
- * Handles form submission, error handling, and success feedback.
+ * Wrapped in Suspense because it calls useSearchParams() which can bail out of static rendering.
  */
-export default function CreateUserPage() {
+function CreateUserFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenantId = searchParams.get('tenantId') || undefined;
   
   // Local state for notifications
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -103,9 +104,12 @@ export default function CreateUserPage() {
       
       // Submit user creation request
       // Requirement 5.3: Create user account via User_Management_Service
-      createUserMutation.mutate(data as CreateUserFormData);
+      createUserMutation.mutate({
+        ...(data as CreateUserFormData),
+        tenantId,
+      });
     },
-    [createUserMutation]
+    [createUserMutation, tenantId]
   );
 
   /**
@@ -184,5 +188,24 @@ export default function CreateUserPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * User Creation Page Component
+ * 
+ * Provides the interface for superadmins to create new Phelbo users.
+ * Handles form submission, error handling, and success feedback.
+ * Wrapped in Suspense to satisfy Next.js static site generation requirements for useSearchParams.
+ */
+export default function CreateUserPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center p-12 max-w-3xl mx-auto">
+        <p className="text-slate-500 font-sans">Loading creation form...</p>
+      </div>
+    }>
+      <CreateUserFormContent />
+    </Suspense>
   );
 }

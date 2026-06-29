@@ -69,6 +69,7 @@ export interface GetUsersParams {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
+  tenantId?: string;
 }
 
 export interface CreateUserRequest {
@@ -76,6 +77,7 @@ export interface CreateUserRequest {
   fullName: string;
   phoneNumber?: string;
   role: UserRole;
+  tenantId?: string;
 }
 
 export interface UpdateUserRequest {
@@ -232,6 +234,7 @@ export async function getUsers(
         ...(params.search && { search: params.search }),
         ...(params.role && { role: params.role }),
         ...(params.status && { status: params.status }),
+        ...(params.tenantId && { tenantId: params.tenantId }),
       },
     });
     return response.data;
@@ -319,6 +322,26 @@ export async function updateStatus(
       `/users/${userId}/status`,
       statusData
     );
+    return response.data;
+  } catch (error) {
+    throw transformApiError(error);
+  }
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+}
+
+/**
+ * Fetch all dynamic tenants/vendors from the database
+ * 
+ * @returns Promise with list of tenants
+ * @throws ApiError
+ */
+export async function getTenants(): Promise<Tenant[]> {
+  try {
+    const response = await apiClient.get<Tenant[]>('/admin/tenants');
     return response.data;
   } catch (error) {
     throw transformApiError(error);

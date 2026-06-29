@@ -4,6 +4,7 @@ import { loginSchema } from '@/lib/schemas/user';
 import crypto from 'crypto';
 import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
+import { normalizeEmail } from '@/lib/auth';
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -28,10 +29,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         const { email, password } = validationResult.data;
+        const normalizedEmail = normalizeEmail(email);
 
         try {
           await connectDB();
-          const user = await User.findOne({ email: email.toLowerCase() });
+          const user = await User.findOne({ email: normalizedEmail });
 
           if (!user) {
             throw new Error('Invalid email or password');
@@ -59,6 +61,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.fullName,
             role: sessionRole,
+            tenantId: user.tenantId || null,
             accessToken: 'mock-access-token',
           };
         } catch (error) {
@@ -126,6 +129,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
+        token.tenantId = (user as any).tenantId || null;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         token.accessToken = (user as any).accessToken;
       }
@@ -140,6 +144,7 @@ export const authOptions: NextAuthOptions = {
           email: token.email as string,
           name: token.name as string,
           role: token.role as string,
+          tenantId: token.tenantId as string || null,
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (session as any).accessToken = token.accessToken;

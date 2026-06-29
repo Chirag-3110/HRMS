@@ -16,6 +16,7 @@ export interface IUser {
   registrationDate: Date;
   lastLoginDate?: Date;
   password?: string;
+  tenantId?: string;
 }
 
 export interface IUserDocument extends IUser, mongoose.Document {
@@ -42,6 +43,10 @@ const userSchema = new Schema<IUserDocument>(
     phoneNumber: {
       type: String,
       trim: true,
+    },
+    tenantId: {
+      type: String,
+      index: true,
     },
     role: {
       type: String,

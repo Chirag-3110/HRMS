@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const activeShift = await Attendance.findOne({
       userId,
       status: 'checked_in',
+      ...(user.tenantId && { tenantId: user.tenantId }),
     }).lean();
 
     return NextResponse.json({

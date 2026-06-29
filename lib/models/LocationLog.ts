@@ -7,6 +7,7 @@ export interface ILocationLog {
   longitude: number;
   timestamp: Date;
   distanceFromPrev: number; // in kilometers
+  tenantId?: string;
 }
 
 export interface ILocationLogDocument extends ILocationLog, Document {
@@ -19,6 +20,10 @@ const locationLogSchema = new Schema<ILocationLogDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
+    },
+    tenantId: {
+      type: String,
       index: true,
     },
     attendanceId: {

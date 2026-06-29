@@ -12,6 +12,7 @@ declare module 'next-auth' {
     email: string;
     name: string;
     role: string;
+    tenantId?: string | null;
     accessToken?: string;
   }
 
@@ -21,6 +22,7 @@ declare module 'next-auth' {
       email: string;
       name: string;
       role: string;
+      tenantId?: string | null;
     };
     accessToken?: string;
   }
@@ -32,6 +34,7 @@ declare module 'next-auth/jwt' {
     email: string;
     name: string;
     role: string;
+    tenantId?: string | null;
     accessToken?: string;
   }
 }

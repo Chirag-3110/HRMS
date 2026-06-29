@@ -105,6 +105,7 @@ export function UserFilters({
             <SelectItem value="Admin">Admin</SelectItem>
             <SelectItem value="Member">Member</SelectItem>
             <SelectItem value="Guest">Guest</SelectItem>
+            <SelectItem value="FieldWorker">Field Worker</SelectItem>
           </SelectContent>
         </Select>
       </div>

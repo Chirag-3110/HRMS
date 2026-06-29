@@ -6,10 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import { Activity } from '@/lib/models/Activity';
 import mongoose from 'mongoose';
+import { normalizeEmail } from '@/lib/auth';
 
 type RouteParams = {
   params: Promise<{
@@ -23,6 +26,11 @@ type RouteParams = {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'superadmin') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const { id } = await params;
@@ -35,8 +43,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fetch user
-    const user = await User.findById(id).select('-__v').lean();
+    // SaaS Multitenancy: determine active tenant scope
+    const adminTenantId = (session.user as any).tenantId;
+    
+    // Fetch user (restrict by tenantId if not super-system admin)
+    const query: any = { _id: id };
+    if (adminTenantId && adminTenantId !== 'system') {
+      query.tenantId = adminTenantId;
+    }
+    const user = await User.findOne(query).select('-__v').lean();
 
     if (!user) {
       return NextResponse.json(
@@ -46,7 +61,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch user's activities (most recent 50)
-    const activities = await Activity.find({ userId: id })
+    const activityQuery: any = { userId: id };
+    if (adminTenantId && adminTenantId !== 'system') {
+      activityQuery.tenantId = adminTenantId;
+    }
+    const activities = await Activity.find(activityQuery)
       .sort({ timestamp: -1 })
       .limit(50)
       .select('-__v -userId')
@@ -86,6 +105,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'superadmin') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const { id } = await params;
@@ -99,8 +123,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check if user exists
-    const existingUser = await User.findById(id);
+    // SaaS Multitenancy: determine active tenant scope
+    const adminTenantId = (session.user as any).tenantId;
+
+    // Check if user exists under active tenant
+    const query: any = { _id: id };
+    if (adminTenantId && adminTenantId !== 'system') {
+      query.tenantId = adminTenantId;
+    }
+    const existingUser = await User.findOne(query);
     if (!existingUser) {
       return NextResponse.json(
         { message: 'User not found' },
@@ -109,22 +140,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check for duplicate email if email is being updated
-    if (body.email && body.email !== existingUser.email) {
-      const duplicateUser = await User.findOne({ email: body.email.toLowerCase() });
-      if (duplicateUser) {
-        return NextResponse.json(
-          { message: 'Email already exists' },
-          { status: 409 }
-        );
+    let normalizedEmail = '';
+    if (body.email) {
+      normalizedEmail = normalizeEmail(body.email);
+      if (normalizedEmail !== existingUser.email) {
+        const duplicateUser = await User.findOne({ email: normalizedEmail });
+        if (duplicateUser) {
+          return NextResponse.json(
+            { message: 'Email already exists' },
+            { status: 409 }
+          );
+        }
       }
     }
 
     // Update user
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
+    const updatedUser = await User.findOneAndUpdate(
+      query,
       {
         $set: {
-          ...(body.email && { email: body.email }),
+          ...(body.email && { email: normalizedEmail }),
           ...(body.fullName && { fullName: body.fullName }),
           ...(body.phoneNumber !== undefined && { phoneNumber: body.phoneNumber }),
           ...(body.role && { role: body.role }),

@@ -19,21 +19,32 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const date = searchParams.get('date');
 
+    // SaaS Multitenancy: determine active tenant scope
+    const adminTenantId = (session.user as any).tenantId;
+    let activeTenantId = adminTenantId;
+    if (!adminTenantId || adminTenantId === 'system') {
+      activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+    }
+
     // 1. If no specific worker ID is provided, return all field workers with latest status
     if (!userId) {
-      const fieldWorkers = await User.find({ role: 'FieldWorker' }).select('-password -__v').lean();
+      const workerQuery: any = { role: 'FieldWorker' };
+      if (activeTenantId) {
+        workerQuery.tenantId = activeTenantId;
+      }
+      const fieldWorkers = await User.find(workerQuery).select('-password -__v').lean();
       
       const workersStatus = await Promise.all(
         fieldWorkers.map(async (worker) => {
           // Get latest attendance session
-          const latestShift = await Attendance.findOne({ userId: worker._id })
+          const latestShift = await Attendance.findOne({ userId: worker._id, tenantId: activeTenantId })
             .sort({ checkInTime: -1 })
             .lean();
 
           // Get latest location coordinates
           let latestLocation = null;
           if (latestShift) {
-            latestLocation = await LocationLog.findOne({ attendanceId: latestShift._id })
+            latestLocation = await LocationLog.findOne({ attendanceId: latestShift._id, tenantId: activeTenantId })
               .sort({ timestamp: -1 })
               .lean();
           }
@@ -72,12 +83,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const worker = await User.findOne({ _id: userId, role: 'FieldWorker' }).select('-password -__v').lean();
+    const workerQuery: any = { _id: userId, role: 'FieldWorker' };
+    if (activeTenantId) {
+      workerQuery.tenantId = activeTenantId;
+    }
+    const worker = await User.findOne(workerQuery).select('-password -__v').lean();
     if (!worker) {
       return NextResponse.json({ message: 'Field worker not found' }, { status: 404 });
     }
 
-    const shift = await Attendance.findOne({ userId, date }).lean();
+    const shiftQuery: any = { userId, date };
+    if (activeTenantId) {
+      shiftQuery.tenantId = activeTenantId;
+    }
+    const shift = await Attendance.findOne(shiftQuery).lean();
     if (!shift) {
       return NextResponse.json({
         worker: {
@@ -92,7 +111,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch coordinate history sorted by timestamp
-    const logs = await LocationLog.find({ attendanceId: shift._id })
+    const logQuery: any = { attendanceId: shift._id };
+    if (activeTenantId) {
+      logQuery.tenantId = activeTenantId;
+    }
+    const logs = await LocationLog.find(logQuery)
       .sort({ timestamp: 1 })
       .select('-__v')
       .lean();

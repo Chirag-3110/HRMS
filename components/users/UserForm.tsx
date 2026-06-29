@@ -192,6 +192,7 @@ export function UserForm({
               <SelectItem value="Admin">Admin</SelectItem>
               <SelectItem value="Member">Member</SelectItem>
               <SelectItem value="Guest">Guest</SelectItem>
+              <SelectItem value="FieldWorker">Field Worker</SelectItem>
             </SelectContent>
           </Select>
           <p id="role-description" className="text-sm text-muted-foreground">
@@ -208,6 +209,11 @@ export function UserForm({
             {selectedRole === "Guest" && (
               <span>
                 <strong>Guest:</strong> Limited read-only access to view content without modification rights.
+              </span>
+            )}
+            {selectedRole === "FieldWorker" && (
+              <span>
+                <strong>Field Worker:</strong> Mobile app enabled worker. Can perform clock-in/out and log location telemetry.
               </span>
             )}
             {!selectedRole && (

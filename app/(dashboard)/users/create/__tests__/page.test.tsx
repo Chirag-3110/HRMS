@@ -30,6 +30,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
+  useSearchParams: vi.fn(() => ({
+    get: vi.fn(() => 'apex-logistics'),
+  })),
 }));
 
 // Mock useCreateUser hook

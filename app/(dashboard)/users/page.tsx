@@ -13,6 +13,7 @@ import { useUsers } from '@/lib/hooks/useUsers';
 import type { UserRole, UserStatus } from '@/lib/schemas/user';
 import { Plus, Download } from 'lucide-react';
 import { exportUsersToCSV } from '@/lib/utils/export';
+import { formatTenantName } from '@/lib/utils/tenant';
 
 /**
  * User List Page Content Component
@@ -64,6 +65,9 @@ function UsersPageContent() {
       : 25
   ) as 10 | 25 | 50 | 100;
 
+  // Extract tenantId query parameter
+  const activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+
   // Fetch users with current filters and pagination
   const {
     data: usersData,
@@ -75,6 +79,7 @@ function UsersPageContent() {
     search: searchQuery || undefined,
     role: roleFilter !== 'All' ? roleFilter : undefined,
     status: statusFilter !== 'All' ? statusFilter : undefined,
+    tenantId: activeTenantId,
   });
 
   // Local state for error notification and export loading
@@ -164,17 +169,17 @@ function UsersPageContent() {
    */
   const handleUserClick = React.useCallback(
     (userId: string) => {
-      router.push(`/users/${userId}`);
+      router.push(`/users/${userId}?tenantId=${activeTenantId}`);
     },
-    [router]
+    [router, activeTenantId]
   );
 
   /**
    * Handle create user button click
    */
   const handleCreateUser = React.useCallback(() => {
-    router.push('/users/create');
-  }, [router]);
+    router.push(`/users/create?tenantId=${activeTenantId}`);
+  }, [router, activeTenantId]);
 
   /**
    * Handle export users to CSV
@@ -214,17 +219,25 @@ function UsersPageContent() {
     searchQuery !== '' || roleFilter !== 'All' || statusFilter !== 'All';
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-8 p-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage Phelbo platform users and their accounts
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b border-slate-100">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-slate-900 font-display tracking-tight">
+            Team Directory
+          </h1>
+          <p className="text-sm text-slate-500 font-sans">
+            Manage FieldPulse SaaS team members and field employees for{' '}
+            <span className="font-extrabold text-indigo-600">
+              {formatTenantName(activeTenantId)}
+            </span>
           </p>
         </div>
-        <Button onClick={handleCreateUser} size="default">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={handleCreateUser}
+          className="rounded-2xl px-6 py-2.5 bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 shadow-md shadow-indigo-600/10 transition-all font-display"
+        >
+          <Plus className="mr-2 h-4.5 w-4.5 stroke-[2.5]" />
           Create User
         </Button>
       </div>
@@ -237,38 +250,43 @@ function UsersPageContent() {
         />
       )}
 
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <UserSearchBar
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          className="flex-1"
-        />
-        <div className="flex gap-2">
-          <UserFilters
-            roleFilter={roleFilter}
-            statusFilter={statusFilter}
-            onRoleChange={handleRoleChange}
-            onStatusChange={handleStatusChange}
+      {/* Search and Filter Controls Panel */}
+      <div className="bg-slate-50/50 border border-slate-200/60 rounded-3xl p-6 space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-end justify-between">
+          <UserSearchBar
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            className="w-full lg:max-w-md"
+            placeholder="Search team by name or email..."
           />
-          <Button
-            onClick={handleExportUsers}
-            variant="outline"
-            disabled={isLoading || !usersData || usersData.users.length === 0 || isExporting}
-            aria-label="Export users to CSV"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting ? 'Exporting...' : 'Export Users'}
-          </Button>
+          <div className="flex flex-wrap items-end gap-3">
+            <UserFilters
+              roleFilter={roleFilter}
+              statusFilter={statusFilter}
+              onRoleChange={handleRoleChange}
+              onStatusChange={handleStatusChange}
+              className="w-full sm:w-auto"
+            />
+            <Button
+              onClick={handleExportUsers}
+              variant="outline"
+              disabled={isLoading || !usersData || usersData.users.length === 0 || isExporting}
+              className="h-10 rounded-xl px-4 border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50/80 mt-1 animate-all duration-300"
+              aria-label="Export users to CSV"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {isExporting ? 'Exporting...' : 'Export Directory'}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* User Count and Active Filters Info */}
       {!isLoading && usersData && (
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center justify-between text-xs text-slate-500 font-bold px-2">
           <p>
-            Showing {usersData.users.length} of {usersData.pagination.totalCount} users
-            {hasActiveFilters && ' (filtered)'}
+            Showing {usersData.users.length} of {usersData.pagination.totalCount} registered accounts
+            {hasActiveFilters && ' (filters active)'}
           </p>
           {hasActiveFilters && (
             <button
@@ -279,9 +297,9 @@ function UsersPageContent() {
                   status: null,
                 });
               }}
-              className="text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-indigo-600 hover:text-indigo-700 hover:underline transition-colors"
             >
-              Clear all filters
+              Reset active filters
             </button>
           )}
         </div>
@@ -292,19 +310,19 @@ function UsersPageContent() {
         <LoadingSkeleton variant="table" rows={pageSize > 10 ? 10 : pageSize} />
       )}
 
-      {/* User Table */}
+      {/* User Table / Data Grid */}
       {!isLoading && usersData && (
         <>
           {usersData.users.length === 0 ? (
             // Empty State
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 py-12">
-              <p className="text-lg font-medium text-gray-900">
-                {hasActiveFilters ? 'No users found' : 'No users yet'}
+            <div className="flex flex-col items-center justify-center rounded-[28px] border border-dashed border-slate-200 bg-slate-50/50 py-16 text-center">
+              <p className="text-sm font-black text-slate-800">
+                {hasActiveFilters ? 'No accounts match filter criteria' : 'No team members registered yet'}
               </p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-xs text-slate-400 max-w-xs">
                 {hasActiveFilters
-                  ? 'Try adjusting your search or filters'
-                  : 'Create your first user to get started'}
+                  ? 'Try clearing searches or adjusting filters to expand selection.'
+                  : 'Start adding employees to this tenant instance.'}
               </p>
               {hasActiveFilters ? (
                 <Button
@@ -316,14 +334,14 @@ function UsersPageContent() {
                       status: null,
                     });
                   }}
-                  className="mt-4"
+                  className="mt-4 rounded-xl text-xs font-bold"
                 >
                   Clear filters
                 </Button>
               ) : (
-                <Button onClick={handleCreateUser} className="mt-4">
+                <Button onClick={handleCreateUser} className="mt-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create User
+                  Create First User
                 </Button>
               )}
             </div>
@@ -337,43 +355,44 @@ function UsersPageContent() {
 
           {/* Pagination Controls */}
           {usersData.users.length > 0 && (
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-6 px-2">
               {/* Page Size Selector */}
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>Show</span>
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <span>Display</span>
                 <select
                   value={pageSize}
                   onChange={(e) => handlePageSizeChange(parseInt(e.target.value, 10))}
-                  className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:border-indigo-500 focus:outline-none"
                   aria-label="Users per page"
                 >
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
+                  <option value="10">10 per page</option>
+                  <option value="25">25 per page</option>
+                  <option value="50">50 per page</option>
+                  <option value="100">100 per page</option>
                 </select>
-                <span>per page</span>
               </div>
 
               {/* Pagination Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
+                  className="rounded-xl h-8.5 text-xs font-bold border-slate-200 disabled:opacity-50"
                   aria-label="Previous page"
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-600">
-                  Page {currentPage} of {usersData.pagination.totalPages}
+                <span className="text-xs font-mono font-bold text-slate-600 bg-slate-50 border border-slate-200/50 rounded-lg px-2.5 py-1">
+                  Page {currentPage} / {usersData.pagination.totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= usersData.pagination.totalPages}
+                  className="rounded-xl h-8.5 text-xs font-bold border-slate-200 disabled:opacity-50"
                   aria-label="Next page"
                 >
                   Next

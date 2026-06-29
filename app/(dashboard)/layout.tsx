@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Users, 
@@ -19,7 +19,68 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useTenants } from '@/lib/hooks/useTenants';
+
+function TenantSwitcher({ pathname, router, session }: { pathname: string; router: any; session: any }) {
+  const searchParams = useSearchParams();
+  const activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+
+  // Load tenants dynamically from DB
+  const { data: dynamicTenants } = useTenants();
+
+  // Fallback to defaults if loading/error
+  const tenants = dynamicTenants || [
+    { id: 'apex-logistics', name: 'Apex Logistics' },
+    { id: 'prime-healthcare', name: 'Prime Healthcare' },
+  ];
+
+  const adminTenantId = (session?.user as any)?.tenantId;
+  const isSystemSuperadmin = !adminTenantId || adminTenantId === 'system';
+
+  const handleTenantChange = (newTenantId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tenantId', newTenantId);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  return (
+    <>
+      {isSystemSuperadmin ? (
+        <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl px-3.5 py-1.5 hover:bg-slate-100/50 transition-all duration-200 shadow-sm relative shrink-0">
+          <Database className="h-4 w-4 text-indigo-500 animate-pulse-slow" />
+          <div className="flex flex-col text-left mr-2">
+            <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-widest leading-none">Active Vendor</span>
+            <select
+              value={activeTenantId}
+              onChange={(e) => handleTenantChange(e.target.value)}
+              className="text-xs font-black uppercase text-slate-800 bg-transparent border-none outline-none pr-6 cursor-pointer focus:ring-0 focus:outline-none appearance-none font-sans"
+            >
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="absolute right-3.5 top-[18px] pointer-events-none text-slate-400">
+            <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
+              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+            </svg>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/80 rounded-2xl px-3.5 py-1.5 shrink-0">
+          <Database className="h-4 w-4 text-emerald-500 animate-pulse-slow" />
+          <div className="flex flex-col text-left">
+            <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-widest leading-none">Vendor Scope</span>
+            <span className="text-xs font-black uppercase text-slate-800">
+              {adminTenantId === 'apex-logistics' ? 'Apex Logistics' : 'Prime Healthcare'}
+            </span>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -51,7 +112,7 @@ export default function DashboardLayout({
     <div className="bg-gradient-to-br from-slate-50 via-slate-100/60 to-indigo-50/40 min-h-screen flex flex-col md:flex-row p-0 font-sans antialiased overflow-hidden">
       
       {/* Sidebar - Floating Dark Card - Desktop */}
-      <aside className="hidden md:flex flex-col w-80 h-[calc(100vh-2rem)] m-4 mr-0 rounded-[32px] bg-slate-950 text-slate-200 border border-slate-900 shadow-2xl shrink-0 flex-col overflow-hidden relative">
+      <aside className="hidden md:flex flex-col w-85 h-[calc(100vh-2rem)] m-4 mr-0 rounded-[32px] bg-slate-950 text-slate-200 border border-slate-900 shadow-2xl shrink-0 overflow-hidden relative">
         <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_bottom,#3b82f6_1px,transparent_1px)] bg-[size:100%_40px]"></div>
         
         {/* Brand Header */}
@@ -60,8 +121,8 @@ export default function DashboardLayout({
             <Activity className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-black text-white uppercase tracking-widest leading-none">Phelbo Go</h1>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1.5">Enterprise Portal</p>
+            <h1 className="text-sm font-black text-white uppercase tracking-widest leading-none">FieldPulse</h1>
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1.5">SaaS Portal</p>
           </div>
         </div>
 
@@ -101,7 +162,7 @@ export default function DashboardLayout({
             </div>
             <div className="overflow-hidden">
               <h4 className="text-xs font-black text-white truncate leading-none">{session?.user?.name || 'Super Administrator'}</h4>
-              <p className="text-[9px] text-slate-500 truncate mt-1">{session?.user?.email || 'admin@phelbo.com'}</p>
+              <p className="text-[9px] text-slate-500 truncate mt-1">{session?.user?.email || 'superadmin@fieldpulse.com'}</p>
             </div>
           </div>
 
@@ -122,7 +183,7 @@ export default function DashboardLayout({
           <div className="p-1.5 bg-blue-600 rounded-lg">
             <Activity className="h-4 w-4 text-white" />
           </div>
-          <span className="text-xs font-black uppercase tracking-wider text-white">Phelbo Go Admin</span>
+          <span className="text-xs font-black uppercase tracking-wider text-white">FieldPulse Admin</span>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -191,8 +252,13 @@ export default function DashboardLayout({
           {/* Header Controls Center */}
           <div className="flex items-center gap-6">
             
+            {/* Dynamic Tenant Selector for Multi-tenant SaaS */}
+            <Suspense fallback={<div className="h-10 w-40 bg-slate-50 animate-pulse rounded-2xl border border-slate-200/60" />}>
+              <TenantSwitcher pathname={pathname} router={router} session={session} />
+            </Suspense>
+
             {/* System Status Metrics */}
-            <div className="flex items-center gap-4 border-r border-gray-150 pr-6 text-[10px] font-bold text-slate-500">
+            <div className="flex items-center gap-4 border-r border-gray-150 pr-6 text-[10px] font-bold text-slate-500 shrink-0">
               <div className="flex items-center gap-1.5">
                 <Database className="h-3.5 w-3.5 text-emerald-500" />
                 <span>DB: <span className="text-slate-800 font-extrabold">CONNECTED</span></span>
@@ -204,7 +270,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Time & Alert info */}
-            <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+            <div className="flex items-center gap-4 text-xs font-bold text-slate-700 shrink-0">
               <span className="font-mono bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/40">{sysTime}</span>
               <button className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors border border-gray-200/30 relative">
                 <Bell className="h-4.5 w-4.5" />

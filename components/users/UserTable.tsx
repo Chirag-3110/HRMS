@@ -107,8 +107,8 @@ export function UserTable({
    */
   const getStatusBadgeClass = (status: UserStatus): string => {
     return status === 'active'
-      ? 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700'
-      : 'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700';
+      ? 'inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+      : 'inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/40';
   };
 
   /**
@@ -118,18 +118,18 @@ export function UserTable({
    */
   const getRoleBadgeClass = (role: UserRole): string => {
     const baseClass =
-      'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider';
+      'inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider border';
     switch (role) {
       case 'Admin':
-        return `${baseClass} bg-purple-50 text-purple-700 border border-purple-200/50`;
+        return `${baseClass} bg-indigo-50 text-indigo-700 border-indigo-200/55`;
       case 'Member':
-        return `${baseClass} bg-blue-50 text-blue-700 border border-blue-200/50`;
+        return `${baseClass} bg-blue-50 text-blue-700 border-blue-200/55`;
       case 'Guest':
-        return `${baseClass} bg-slate-50 text-slate-600 border border-slate-200/50`;
+        return `${baseClass} bg-slate-50 text-slate-505 border-slate-200/55`;
       case 'FieldWorker':
-        return `${baseClass} bg-indigo-50 text-indigo-700 border border-indigo-200/50`;
+        return `${baseClass} bg-amber-50 text-amber-700 border-amber-200/55`;
       default:
-        return `${baseClass} bg-slate-50 text-slate-600 border border-slate-250`;
+        return `${baseClass} bg-slate-50 text-slate-600 border-slate-250`;
     }
   };
 
@@ -172,16 +172,16 @@ export function UserTable({
   }
 
   return (
-    <div className="rounded-[24px] border border-slate-200/80 overflow-hidden shadow-sm bg-white">
+    <div className="rounded-[28px] border border-slate-200/60 overflow-hidden shadow-sm bg-white hover:shadow-md transition-all duration-300">
       <Table>
         <TableHeader>
           <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/80">
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4 px-6">Name</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Email</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Role</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Status</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4">Registration Date</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase text-slate-500 tracking-wider py-4 text-right px-6">Actions</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 px-6 font-display">Name</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 font-display">Email</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 font-display">Role</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 font-display">Status</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 font-display">Registration Date</TableHead>
+            <TableHead className="font-black text-[9px] uppercase text-slate-400 tracking-widest py-4 text-right px-6 font-display">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -6,9 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import type { UserRole, UserStatus } from '@/lib/schemas/user';
+import { normalizeEmail } from '@/lib/auth';
 
 /**
  * GET /api/users
@@ -16,6 +19,11 @@ import type { UserRole, UserStatus } from '@/lib/schemas/user';
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'superadmin') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const searchParams = request.nextUrl.searchParams;
@@ -25,8 +33,18 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role') as UserRole | null;
     const status = searchParams.get('status') as UserStatus | null;
 
+    // SaaS Multitenancy: determine active tenant scope
+    const adminTenantId = (session.user as any).tenantId;
+    let activeTenantId = adminTenantId;
+    if (!adminTenantId || adminTenantId === 'system') {
+      activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
+    }
+
     // Build query
     const query: any = {};
+    if (activeTenantId) {
+      query.tenantId = activeTenantId;
+    }
 
     // Search filter (uses text index on fullName and email)
     if (search) {
@@ -94,6 +112,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'superadmin') {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const body = await request.json();
@@ -107,8 +130,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for duplicate email
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    // SaaS Multitenancy: determine active tenant scope
+    const adminTenantId = (session.user as any).tenantId;
+    let activeTenantId = adminTenantId;
+    if (!adminTenantId || adminTenantId === 'system') {
+      activeTenantId = body.tenantId || 'apex-logistics';
+    }
+
+    // Check for duplicate email (within same tenant is enough, but global duplicate check protects user uniqueness)
+    const normalizedEmail = normalizeEmail(email);
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return NextResponse.json(
         { message: 'Email already exists' },
@@ -118,12 +149,13 @@ export async function POST(request: NextRequest) {
 
     // Create new user
     const user = await User.create({
-      email,
+      email: normalizedEmail,
       fullName,
       phoneNumber,
       role,
       status: 'active',
       registrationDate: new Date(),
+      tenantId: activeTenantId,
     });
 
     // Transform to match API interface

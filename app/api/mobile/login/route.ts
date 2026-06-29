@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import crypto from 'crypto';
 import { encode } from 'next-auth/jwt';
+import { normalizeEmail } from '@/lib/auth';
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -21,7 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = normalizeEmail(email);
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return NextResponse.json(
         { message: 'Invalid email or password' },
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.fullName,
       role: sessionRole,
+      tenantId: user.tenantId || null,
       accessToken: 'mock-access-token',
     };
 
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
         fullName: user.fullName,
         email: user.email,
         role: sessionRole,
+        tenantId: user.tenantId || null,
       }
     });
   } catch (error) {
