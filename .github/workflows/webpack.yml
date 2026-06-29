@@ -1,28 +1,45 @@
-name: NodeJS with Webpack
+name: HRMS Web CI/CD
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
+  build-and-deploy:
+    runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
 
-    - name: Build
-      run: |
-        npm install
-        npx webpack
+      - name: Copy production env
+        run: |
+          if [ -f /home/ubuntu/HRMS/.env.production.local ]; then
+            cp /home/ubuntu/HRMS/.env.production.local .env.production.local
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Start / restart app
+        run: |
+          pm2 restart hrms || pm2 start npm --name "hrms" -- start
+          pm2 save
+
+      - name: Reload Nginx
+        run: sudo systemctl reload nginx
+
+      - name: Done
+        run: echo "🚀 Deployment complete!"
