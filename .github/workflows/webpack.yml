@@ -35,7 +35,8 @@ jobs:
 
       - name: Start / restart app
         run: |
-          pm2 restart hrms || pm2 start npm --name "hrms" -- start
+          pm2 delete hrms 2>/dev/null || true
+          pm2 start npm --name "hrms" --cwd "$GITHUB_WORKSPACE" -- start
           pm2 save
 
       - name: Reload Nginx
@@ -43,3 +44,5 @@ jobs:
 
       - name: Done
         run: echo "🚀 Deployment complete!"
+
+        
