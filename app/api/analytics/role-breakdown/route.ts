@@ -5,6 +5,8 @@ import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import type { UserRole } from '@/lib/schemas/user';
 
+const ALL_ROLES: UserRole[] = ['Admin', 'Member', 'Guest', 'FieldWorker'];
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,20 +21,30 @@ export async function GET(request: NextRequest) {
       activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
     }
 
-    const query: any = {};
+    const matchQuery: any = {};
     if (activeTenantId) {
-      query.tenantId = activeTenantId;
+      matchQuery.tenantId = activeTenantId;
     }
 
     await connectDB();
 
-    const roles: UserRole[] = ['Admin', 'Member', 'Guest', 'FieldWorker'];
-    const breakdown = await Promise.all(
-      roles.map(async (role) => {
-        const count = await User.countDocuments({ ...query, role });
-        return { role, count };
-      })
-    );
+    // Single aggregation instead of 4 separate countDocuments calls
+    const aggregationResult = await User.aggregate([
+      { $match: matchQuery },
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+    ]);
+
+    // Build a count map
+    const countMap: Record<string, number> = {};
+    for (const item of aggregationResult) {
+      countMap[item._id] = item.count;
+    }
+
+    // Ensure all roles are present in the response, even if count is 0
+    const breakdown = ALL_ROLES.map((role) => ({
+      role,
+      count: countMap[role] ?? 0,
+    }));
 
     return NextResponse.json({ data: breakdown });
   } catch (error) {

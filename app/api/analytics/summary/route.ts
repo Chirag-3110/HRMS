@@ -18,27 +18,39 @@ export async function GET(request: NextRequest) {
       activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
     }
 
-    const query: any = {};
+    const matchQuery: any = {};
     if (activeTenantId) {
-      query.tenantId = activeTenantId;
+      matchQuery.tenantId = activeTenantId;
     }
 
     await connectDB();
 
-    const totalUsers = await User.countDocuments(query);
-    const activeUsers = await User.countDocuments({ ...query, status: 'active' });
-    
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const newUsersLast30Days = await User.countDocuments({
-      ...query,
-      registrationDate: { $gte: thirtyDaysAgo },
-    });
+
+    // Single aggregation replaces 3 separate countDocuments calls
+    const [result] = await User.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: null,
+          totalUsers: { $sum: 1 },
+          activeUsers: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] },
+          },
+          newUsersLast30Days: {
+            $sum: {
+              $cond: [{ $gte: ['$registrationDate', thirtyDaysAgo] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
 
     return NextResponse.json({
-      totalUsers,
-      activeUsers,
-      newUsersLast30Days,
+      totalUsers: result?.totalUsers ?? 0,
+      activeUsers: result?.activeUsers ?? 0,
+      newUsersLast30Days: result?.newUsersLast30Days ?? 0,
     });
   } catch (error) {
     console.error('Error fetching analytics summary:', error);

@@ -77,8 +77,18 @@ const userSchema = new Schema<IUserDocument>(
   }
 );
 
-// Create text index for search functionality
+// Text index for search functionality
 userSchema.index({ fullName: 'text', email: 'text' });
+
+// Compound indexes for common query patterns
+// tenantId + status — used in countDocuments and analytics aggregations
+userSchema.index({ tenantId: 1, status: 1 });
+// tenantId + role — used in role-breakdown aggregation
+userSchema.index({ tenantId: 1, role: 1 });
+// tenantId + registrationDate — used in registration trends and newUsersLast30Days
+userSchema.index({ tenantId: 1, registrationDate: -1 });
+// tenantId + createdAt — used for sorting in paginated user list
+userSchema.index({ tenantId: 1, createdAt: -1 });
 
 // Prevent model overwrite during hot-reload in development
 export const User: Model<IUserDocument> =

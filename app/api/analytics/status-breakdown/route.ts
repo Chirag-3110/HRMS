@@ -5,6 +5,8 @@ import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import type { UserStatus } from '@/lib/schemas/user';
 
+const ALL_STATUSES: UserStatus[] = ['active', 'deactivated'];
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,20 +21,30 @@ export async function GET(request: NextRequest) {
       activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
     }
 
-    const query: any = {};
+    const matchQuery: any = {};
     if (activeTenantId) {
-      query.tenantId = activeTenantId;
+      matchQuery.tenantId = activeTenantId;
     }
 
     await connectDB();
 
-    const statuses: UserStatus[] = ['active', 'deactivated'];
-    const breakdown = await Promise.all(
-      statuses.map(async (status) => {
-        const count = await User.countDocuments({ ...query, status });
-        return { status, count };
-      })
-    );
+    // Single aggregation instead of 2 separate countDocuments calls
+    const aggregationResult = await User.aggregate([
+      { $match: matchQuery },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]);
+
+    // Build a count map
+    const countMap: Record<string, number> = {};
+    for (const item of aggregationResult) {
+      countMap[item._id] = item.count;
+    }
+
+    // Ensure all statuses are present in the response, even if count is 0
+    const breakdown = ALL_STATUSES.map((status) => ({
+      status,
+      count: countMap[status] ?? 0,
+    }));
 
     return NextResponse.json({ data: breakdown });
   } catch (error) {

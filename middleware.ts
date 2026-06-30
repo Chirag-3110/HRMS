@@ -61,8 +61,12 @@ export const config = {
      * - /api/auth/* (NextAuth.js endpoints)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt (static files)
+     * - Any path with a file extension (static assets)
+     *
+     * NOTE: more-specific paths must come before less-specific ones in the
+     * negative lookahead so 'mobile/login' is checked before 'login'.
      */
-    '/((?!login|mobile/login|api/auth|_next|favicon.ico|robots.txt|.*\\..*$).*)',
+    '/((?!mobile/login|login|api/auth|_next|favicon\\.ico|robots\\.txt|.*\\..*$).*)',
   ],
 };
 

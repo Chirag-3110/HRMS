@@ -93,8 +93,9 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sysTime, setSysTime] = useState('');
 
-  // Live ticking clock in top header
+  // Live ticking clock — initialized client-side only to avoid hydration mismatch
   useEffect(() => {
+    // Set initial time after mount so server and client render match (empty string)
     setSysTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     const t = setInterval(() => {
       setSysTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -134,6 +135,7 @@ export default function DashboardLayout({
               <Link
                 key={item.name}
                 href={item.href}
+                suppressHydrationWarning
                 className={`flex items-start gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/15 scale-[1.02]'
@@ -212,6 +214,7 @@ export default function DashboardLayout({
                     key={item.name}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
+                    suppressHydrationWarning
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-xs font-bold uppercase ${
                       isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'
                     }`}

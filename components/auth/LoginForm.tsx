@@ -47,32 +47,24 @@ export function LoginForm() {
       setIsLoading(true);
       setAuthError("");
 
-      console.log("Attempting sign in with:", data.email);
-
       const result = await signIn("credentials", {
         redirect: false,
         email: data.email,
         password: data.password,
       });
 
-      console.log("Sign in result:", result);
-
       if (result?.error) {
-        // Authentication failed
-        console.error("Sign in error:", result.error);
         setAuthError("Invalid email or password. Please try again.");
         setIsLoading(false);
         return;
       }
 
       if (result?.ok) {
-        // Authentication successful - redirect to dashboard
-        console.log("Sign in successful, redirecting...");
-        router.push("/");
-        router.refresh();
+        // Hard redirect — ensures browser sends a fresh request with the new
+        // session cookie already set. Avoids middleware race condition with
+        // router.push(). Use replace() so login page is not in history.
+        window.location.replace('/');
       } else {
-        // Unexpected result state
-        console.error("Unexpected sign in result:", result);
         setAuthError("An unexpected error occurred. Please try again.");
         setIsLoading(false);
       }

@@ -18,41 +18,55 @@ export async function GET(request: NextRequest) {
       activeTenantId = searchParams.get('tenantId') || 'apex-logistics';
     }
 
-    const query: any = {};
+    const matchQuery: any = {};
     if (activeTenantId) {
-      query.tenantId = activeTenantId;
+      matchQuery.tenantId = activeTenantId;
     }
 
     await connectDB();
 
-    // Fetch user registration dates
-    const users = await User.find(query).select('registrationDate').lean();
-    
-    // Initialize past 12 months data structure
-    const monthsData: Record<string, number> = {};
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().substring(2)}`;
-      monthsData[label] = 0;
+    // Calculate date 12 months ago
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+    matchQuery.registrationDate = { $gte: twelveMonthsAgo };
+
+    // Use aggregation instead of fetching all users — much faster
+    const aggregationResult = await User.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$registrationDate' },
+            month: { $month: '$registrationDate' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+    ]);
+
+    // Build a lookup map from aggregation result
+    const countMap: Record<string, number> = {};
+    for (const item of aggregationResult) {
+      const key = `${item._id.year}-${item._id.month}`;
+      countMap[key] = item.count;
     }
 
-    // Populate counts from MongoDB users
-    users.forEach((user) => {
-      if (!user.registrationDate) return;
-      const regDate = new Date(user.registrationDate);
-      const label = `${monthNames[regDate.getMonth()]} ${regDate.getFullYear().toString().substring(2)}`;
-      if (monthsData[label] !== undefined) {
-        monthsData[label]++;
-      }
-    });
+    // Build the last 12 months labels in order
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const data = [];
 
-    const data = Object.entries(monthsData).map(([month, count]) => ({
-      month,
-      count,
-    }));
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1; // 1-indexed
+      const label = `${monthNames[d.getMonth()]} ${year.toString().substring(2)}`;
+      const key = `${year}-${month}`;
+      data.push({ month: label, count: countMap[key] ?? 0 });
+    }
 
     return NextResponse.json({ data });
   } catch (error) {
