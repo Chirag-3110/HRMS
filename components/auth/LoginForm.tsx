@@ -122,7 +122,7 @@ export function LoginForm() {
 
           {/* Password Field */}
           <div className="space-y-2">
-            <Label htmlFor="password">Passwordd</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
