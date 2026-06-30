@@ -2,18 +2,18 @@ import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
 /**
- * Middleware to protect dashboard and mobile routes
- * 
+ * Proxy (formerly middleware) to protect dashboard and mobile routes.
+ *
  * Verifies authenticated session and role before allowing access.
- * - superadmin -> has access to admin dashboard and mobile
- * - fieldworker -> has access to mobile dashboard and attendance APIs
+ * - superadmin  -> admin dashboard + mobile
+ * - fieldworker -> mobile dashboard + attendance APIs
  */
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // If no token exists, the user is unauthenticated
+    // Unauthenticated — redirect to appropriate login
     if (!token) {
       if (path.startsWith('/mobile')) {
         return NextResponse.redirect(new URL('/mobile/login', req.url));
@@ -21,8 +21,6 @@ export default withAuth(
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
-    // Role-based access control
-    
     // 1. Mobile interface and Attendance API access
     if (path.startsWith('/mobile') || path.startsWith('/api/attendance')) {
       if (token.role === 'fieldworker' || token.role === 'superadmin') {
@@ -31,7 +29,7 @@ export default withAuth(
       return NextResponse.redirect(new URL('/mobile/login', req.url));
     }
 
-    // 2. Admin dashboard access (everything else matched by middleware)
+    // 2. Admin dashboard — superadmin only
     if (token.role !== 'superadmin') {
       if (token.role === 'fieldworker') {
         return NextResponse.redirect(new URL('/mobile', req.url));
@@ -43,30 +41,19 @@ export default withAuth(
   },
   {
     callbacks: {
-      // Set to true so middleware always runs for matched routes, allowing custom redirect logic
+      // Always run so custom redirect logic above can execute
       authorized: () => true,
     },
   }
 );
 
 /**
- * Configure which routes require authentication
+ * Routes that require authentication check.
+ * Excludes: login pages, NextAuth endpoints, Next.js internals, static assets.
+ * NOTE: mobile/login must come before login in the lookahead.
  */
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - /login (admin login)
-     * - /mobile/login (field worker login)
-     * - /api/auth/* (NextAuth.js endpoints)
-     * - /_next/* (Next.js internals)
-     * - /favicon.ico, /robots.txt (static files)
-     * - Any path with a file extension (static assets)
-     *
-     * NOTE: more-specific paths must come before less-specific ones in the
-     * negative lookahead so 'mobile/login' is checked before 'login'.
-     */
     '/((?!mobile/login|login|api/auth|_next|favicon\\.ico|robots\\.txt|.*\\..*$).*)',
   ],
 };
-

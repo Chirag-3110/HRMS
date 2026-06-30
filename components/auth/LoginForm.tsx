@@ -4,34 +4,20 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { loginSchema, type LoginFormData } from "@/lib/schemas/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-/**
- * LoginForm Component
- * 
- * Handles superadmin authentication with email and password fields.
- * Integrates React Hook Form with Zod validation schema.
- * 
- * Features:
- * - Client-side validation using Zod
- * - Form submission with NextAuth signIn
- * - Loading state during authentication
- * - Error display for validation and authentication failures
- * - Success redirect to dashboard
- * 
- * Validates Requirements:
- * - 1.1: Display login page with email and password fields
- * - 1.2: Submit and verify credentials
- * - 1.3: Display error for invalid credentials
- */
-export function LoginForm() {
-  const router = useRouter();
+interface LoginFormProps {
+  /** Pre-populated error from server (e.g. NextAuth ?error= query param) */
+  initialError?: string;
+}
+
+export function LoginForm({ initialError }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [authError, setAuthError] = useState<string>("");
+  // Initialise with server-side error so it shows immediately on page load
+  const [authError, setAuthError] = useState<string>(initialError ?? "");
 
   const {
     register,
@@ -48,21 +34,28 @@ export function LoginForm() {
       setAuthError("");
 
       const result = await signIn("credentials", {
-        redirect: false,
+        redirect: false,   // Never let NextAuth redirect — we handle it
         email: data.email,
         password: data.password,
       });
 
-      if (result?.error) {
+      if (!result) {
+        // Network / server error — no response at all
+        setAuthError("Could not reach the server. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (result.error) {
+        // Wrong credentials or deactivated account
         setAuthError("Invalid email or password. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      if (result?.ok) {
-        // Hard redirect — ensures browser sends a fresh request with the new
-        // session cookie already set. Avoids middleware race condition with
-        // router.push(). Use replace() so login page is not in history.
+      if (result.ok) {
+        // Hard redirect — browser sends a fresh request so the new session
+        // cookie is included. replace() removes login from browser history.
         window.location.replace('/');
       } else {
         setAuthError("An unexpected error occurred. Please try again.");
@@ -79,7 +72,7 @@ export function LoginForm() {
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
         <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-          Phelbo Superadmin
+          Phelbo Super Admin
         </h2>
         <p className="mt-2 text-sm text-gray-600">
           Sign in to access the dashboard
@@ -102,11 +95,7 @@ export function LoginForm() {
               aria-describedby={errors.email ? "email-error" : undefined}
             />
             {errors.email && (
-              <p
-                id="email-error"
-                className="text-sm text-red-600"
-                role="alert"
-              >
+              <p id="email-error" className="text-sm text-red-600" role="alert">
                 {errors.email.message}
               </p>
             )}
@@ -126,33 +115,22 @@ export function LoginForm() {
               aria-describedby={errors.password ? "password-error" : undefined}
             />
             {errors.password && (
-              <p
-                id="password-error"
-                className="text-sm text-red-600"
-                role="alert"
-              >
+              <p id="password-error" className="text-sm text-red-600" role="alert">
                 {errors.password.message}
               </p>
             )}
           </div>
         </div>
 
-        {/* Authentication Error Display */}
+        {/* Auth Error */}
         {authError && (
-          <div
-            className="rounded-md bg-red-50 border border-red-200 p-4"
-            role="alert"
-          >
+          <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
             <p className="text-sm text-red-800">{authError}</p>
           </div>
         )}
 
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isLoading}
-        >
+        {/* Submit */}
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <span className="flex items-center justify-center">
               <svg
@@ -162,14 +140,7 @@ export function LoginForm() {
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path
                   className="opacity-75"
                   fill="currentColor"
