@@ -78,6 +78,7 @@ export interface CreateUserRequest {
   phoneNumber?: string;
   role: UserRole;
   tenantId?: string;
+  password?: string;
 }
 
 export interface UpdateUserRequest {

@@ -37,6 +37,7 @@ export const createUserSchema = z.object({
   role: z.enum(['Admin', 'Member', 'Guest', 'FieldWorker'], {
     message: 'Role must be Admin, Member, Guest, or FieldWorker',
   }),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 /**
@@ -65,6 +66,7 @@ export const updateUserSchema = z
         message: 'Role must be Admin, Member, Guest, or FieldWorker',
       })
       .optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',

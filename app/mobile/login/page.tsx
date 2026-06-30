@@ -1,18 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { loginSchema, type LoginFormData } from '@/lib/schemas/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldCheck, Truck } from 'lucide-react';
 
-export default function MobileLoginPage() {
+function MobileLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get('email') || '';
+  const passwordParam = searchParams.get('password') || '';
+
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string>('');
 
@@ -20,15 +24,32 @@ export default function MobileLoginPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: emailParam,
+      password: passwordParam,
+    },
     mode: 'onBlur',
   });
+
+  // Sync state if parameters are available/changed
+  useEffect(() => {
+    if (emailParam) {
+      setValue('email', emailParam);
+    }
+    if (passwordParam) {
+      setValue('password', passwordParam);
+    }
+  }, [emailParam, passwordParam, setValue]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsLoading(true);
       setAuthError('');
+
+      console.log('Attempting mobile login for:', data.email);
 
       const result = await signIn('credentials', {
         redirect: false,
@@ -36,8 +57,10 @@ export default function MobileLoginPage() {
         password: data.password,
       });
 
+      console.log('Mobile login result:', result);
+
       if (result?.error) {
-        setAuthError('Invalid email or password. Try worker1@example.com / password123');
+        setAuthError('Invalid email or password. Try test66@yopmail.com / Password123!');
         setIsLoading(false);
         return;
       }
@@ -52,6 +75,13 @@ export default function MobileLoginPage() {
       setIsLoading(false);
     }
   };
+
+  // Auto-submit if valid email and password are provided in URL
+  useEffect(() => {
+    if (emailParam && passwordParam && emailParam.includes('@') && passwordParam.length >= 8) {
+      onSubmit({ email: emailParam, password: passwordParam });
+    }
+  }, [emailParam, passwordParam]);
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-between px-6 py-12 text-slate-100 font-sans">
@@ -137,5 +167,17 @@ export default function MobileLoginPage() {
         <span>Secured SSL Telemetry Connection</span>
       </div>
     </div>
+  );
+}
+
+export default function MobileLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-400 font-sans">
+        <p>Loading login portal...</p>
+      </div>
+    }>
+      <MobileLoginForm />
+    </Suspense>
   );
 }

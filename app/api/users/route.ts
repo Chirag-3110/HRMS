@@ -12,6 +12,11 @@ import { connectDB } from '@/lib/mongodb';
 import { User } from '@/lib/models/User';
 import type { UserRole, UserStatus } from '@/lib/schemas/user';
 import { normalizeEmail } from '@/lib/auth';
+import crypto from 'crypto';
+
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 /**
  * GET /api/users
@@ -120,7 +125,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { email, fullName, phoneNumber, role } = body;
+    const { email, fullName, phoneNumber, role, password } = body;
 
     // Validate required fields
     if (!email || !fullName || !role) {
@@ -156,6 +161,7 @@ export async function POST(request: NextRequest) {
       status: 'active',
       registrationDate: new Date(),
       tenantId: activeTenantId,
+      ...(password && { password: hashPassword(password) }),
     });
 
     // Transform to match API interface

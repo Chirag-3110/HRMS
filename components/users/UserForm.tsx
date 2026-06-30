@@ -171,6 +171,34 @@ export function UserForm({
           )}
         </div>
 
+        {/* Password Field (Required in Create mode) */}
+        {mode === "create" && (
+          <div className="space-y-2">
+            <Label htmlFor="password">
+              Password <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter password (min 8 characters)"
+              autoComplete="new-password"
+              disabled={isLoading}
+              {...register("password")}
+              aria-invalid={errors.password ? "true" : "false"}
+              aria-describedby={errors.password ? "password-error" : undefined}
+            />
+            {errors.password && (
+              <p
+                id="password-error"
+                className="text-sm text-red-600"
+                role="alert"
+              >
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Role Field */}
         <div className="space-y-2">
           <Label htmlFor="role">

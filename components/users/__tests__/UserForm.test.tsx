@@ -25,6 +25,7 @@ describe("UserForm Component", () => {
       expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/role/i)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /create user/i })
@@ -46,10 +47,12 @@ describe("UserForm Component", () => {
       const emailInput = screen.getByLabelText(/email address/i);
       const fullNameInput = screen.getByLabelText(/full name/i);
       const phoneInput = screen.getByLabelText(/phone number/i);
+      const passwordInput = screen.getByLabelText(/^password/i);
 
       expect(emailInput).toHaveValue("");
       expect(fullNameInput).toHaveValue("");
       expect(phoneInput).toHaveValue("");
+      expect(passwordInput).toHaveValue("");
     });
 
     it("should display validation errors for required fields when submitted empty", async () => {
@@ -69,6 +72,9 @@ describe("UserForm Component", () => {
         expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
         expect(
           screen.getByText(/name must be at least 2 characters/i)
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/password must be at least 8 characters/i)
         ).toBeInTheDocument();
       });
 
@@ -156,6 +162,10 @@ describe("UserForm Component", () => {
         screen.getByLabelText(/phone number/i),
         "+1 (555) 123-4567"
       );
+      await user.type(
+        screen.getByLabelText(/^password/i),
+        "password123"
+      );
 
       // Select role
       const roleSelect = screen.getByRole("combobox", { name: /role/i });
@@ -173,6 +183,7 @@ describe("UserForm Component", () => {
           fullName: "John Doe",
           phoneNumber: "+1 (555) 123-4567",
           role: "Member",
+          password: "password123",
         } as CreateUserFormData);
       });
     });
@@ -194,6 +205,10 @@ describe("UserForm Component", () => {
         "test@example.com"
       );
       await user.type(screen.getByLabelText(/full name/i), "Jane Smith");
+      await user.type(
+        screen.getByLabelText(/^password/i),
+        "password123"
+      );
 
       const roleSelect = screen.getByRole("combobox", { name: /role/i });
       await user.click(roleSelect);
@@ -209,6 +224,7 @@ describe("UserForm Component", () => {
           fullName: "Jane Smith",
           phoneNumber: "",
           role: "Admin",
+          password: "password123",
         } as CreateUserFormData);
       });
     });
